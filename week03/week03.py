@@ -114,7 +114,7 @@ print(f"Average clustering coefficient in a random network: {nx.average_clusteri
 # 6 互惠性
 # 在社会网络分析中，互惠性（Reciprocity）是衡量有向网络中边互相指向的程度的指标。
 # 在社会心理学中，互惠原则是指对一个积极行动以另一个积极行动回应，以此奖励善意行为的社会规范，对于负面行动也同样适用，例如报复行为或者针锋相对的策略。
-# 在有向图或网络中，如果一个节点A指向另一个节点B，当节点B以相同的方式回应，即B也指向A时，我们称这两个节点之间存在互惠的关系。
+# 在有向图或网络中，如果一个节点 A 指向另一个节点 B，当节点 B 以相同的方式回应，即 B 也指向 A 时，我们称这两个节点之间存在互惠的关系。
 # 在网络层面，互惠性为网络中互惠边占总边数的比例。这个比例越高，表明网络中的互惠关系越普遍。
 # 在社交网络中，互惠性可能指的是相互关注的用户；在经济交易网络中，互惠性可能体现在双方互相进行商品或服务交换。
 
@@ -186,3 +186,137 @@ print(f"Number that are never referenced (i.e., only reference others / only 'so
 print(f"Number that reference others and are referenced by others: {len(mix)}") # 有进有出的节点数
 print(f"Number that have no edges : {len(no_edges)}")   # 没有边的节点数
 
+
+# 7.3 度绘图，直观化度数分布
+# 度的序列
+degree_sequence = sorted(dict(G.degree(nodeOrder)).values(), reverse=True)  # in+out degree
+in_degree_sequence = sorted(dict(G.in_degree(nodeOrder)).values(), reverse=True)
+out_degree_sequence = sorted(dict(G.out_degree(nodeOrder)).values(), reverse=True)
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+# 度数-排名图
+ax1.plot(degree_sequence, "r-", marker=".", label="in+out")
+ax1.plot(in_degree_sequence, "g-", marker=".", label="in")
+ax1.plot(out_degree_sequence, "b-", marker=".", label="out")
+ax1.set_title("Degree Rank Plot")
+ax1.set_ylabel("Degree")
+ax1.set_xlabel("Rank")
+ax1.legend()
+
+# 双对数（Log-Log）图
+# 常用于展示节点度数的分布，以便观察是否遵循幂律分布
+# 幂律分布的特征是大多数节点有很少的连接，而少数节点（比如枢纽节点）有大量的连接
+# 在双对数图中，如果节点度数遵循幂律分布，那么数据点将大致排列在一条直线上
+ax2.loglog(degree_sequence, "r-", marker=".", label="in+out")
+ax2.loglog(in_degree_sequence, "g-", marker=".", label="in")
+ax2.loglog(out_degree_sequence, "b-", marker=".", label="out")
+ax2.set_title("loglog")
+ax2.set_ylabel("Degree")
+ax2.set_xlabel("Rank")
+ax2.legend()
+plt.show()
+
+# 7.4 度的描述
+print("\nIn Degree Descriptive Statistics:\n")
+# 入度
+print(f"Mean in degree: {np.mean(in_degree_sequence):.2f}")     # 平均度
+print(f"Std. deviation: {np.std(in_degree_sequence):.2f}")      # 度的标准差
+print(f"Range: {np.amin(in_degree_sequence)} to {np.amax(in_degree_sequence)}") # 度的范围
+print(f"Median in degree: {np.median(in_degree_sequence)}")     # 度的中位数
+# 出度
+print("\nOut Degree Descriptive Statistics:\n")
+print(f"Mean in degree: {np.mean(out_degree_sequence):.2f}")
+print(f"Std. deviation: {np.std(out_degree_sequence):.2f}")
+print(f"Range: {np.amin(out_degree_sequence)} to {np.amax(out_degree_sequence)}")
+print(f"Median in degree: {np.median(out_degree_sequence)}")
+
+# 7.5 找重要角色：找网络中最活跃或最有影响力的分子
+# 7.5.1 找最大进出度,也就是最活跃的，最有影响力的
+# 从大到小排序
+sorted_in_degree = sorted(in_degree_per_node, reverse=True, key=operator.itemgetter(1))
+sorted_out_degree = sorted(out_degree_per_node, reverse=True, key=operator.itemgetter(1))
+# 打印前五个最大的
+print("\n5 nodes in G with the largest 'in' degree (id, in degree):")
+print(sorted_in_degree[:5])
+print("\n5 nodes in G with the largest 'out' degree (id, out degree):")
+print(sorted_out_degree[:5])
+
+# 7.5.2 找出前五十，最活跃的，最有影响力的部分
+top_in_degree_nodes = set(node[0] for node in sorted_in_degree[:50])    # 找出入度前五十存到集合中
+top_out_degree_nodes = set(node[0] for node in sorted_out_degree[:50])  # 找出出度前五十存到集合中
+# 从上述两个集合中找交集
+nodes_in_both = top_in_degree_nodes.intersection(top_out_degree_nodes)
+print(f"Number of communities in both the top(largest) 50 'in' and 'out' degree lists: {len(nodes_in_both)}")
+
+# 8 皮尔逊系数
+# 皮尔逊相关系数可以衡量两个数据集之间的线性关系。该相关系数在 -1 和 +1 之间变化，其中 0 表示不相关。
+# 如果 r 的值 < 0，则支持负相关
+# 如果 r 的值 > 0，则支持正相关
+# 如果 r 的值为 0，则不支持相关性
+# (+/-) 0.2 至 0.3 范围内的值表示相关性较弱
+# (+/-) 0.4 至 0.5 范围内的值表示中等相关性
+# (+/-) 0.6 至 0.7 范围内的值表示强相关性
+# (+/-) 0.8 至 1.0 范围内的值表明相关性非常强
+
+# (1)提取入度出度序列的值
+in_degree_sequence = list(dict(G.in_degree(nodeOrder)).values())
+out_degree_sequence = list(dict(G.out_degree(nodeOrder)).values())
+# 求皮尔逊系数
+r, p = stats.pearsonr(in_degree_sequence, out_degree_sequence)
+print(f"pearson r: {r:.3f}, {p:.3f}")
+
+# 9 加权有向网络
+# 为了避免重复的边，比如A评论B了多次，我们就没必要每一次建立一个边，只需要用边的权重来表示
+W = nx.DiGraph()
+for post in data:
+    # 如果该边存在，权重加一
+    if W.has_edge(post["SOURCE"], post["TARGET"]):
+        W[post["SOURCE"]][post["TARGET"]]['weight'] += 1
+    # 如果边不存在，添加边，初始化权重为1
+    else:
+        W.add_edge(post["SOURCE"], post["TARGET"], weight=1)
+
+print(f"Number of nodes: {W.number_of_nodes()}")
+print(f"Number of edges: {W.number_of_edges()}")
+print(f"Total of edge weights: {W.size(weight='weight')} (Number of posts)")
+
+# 9.1 节点强度：该节点可能有多个边，各个边上的权重综合称为节点强度。使用度数的一个参数来获取 weight="weight"
+# 建立节点强度序列：整体、入、出
+strength_sequence = sorted(dict(W.degree(nodeOrder, weight="weight")).values(), reverse=True)
+in_strength_sequence = sorted(dict(W.in_degree(nodeOrder, weight="weight")).values(), reverse=True)
+out_strength_sequence = sorted(dict(W.out_degree(nodeOrder, weight="weight")).values(), reverse=True)
+
+# 画图，描述节点强度
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+
+ax1.plot(strength_sequence, "r-", marker=".", label="in+out")
+ax1.plot(in_strength_sequence, "g-", marker=".", label="in")
+ax1.plot(out_strength_sequence, "b-", marker=".", label="out")
+ax1.set_title("Strength Rank Plot")
+ax1.set_ylabel("Strength")
+ax1.set_xlabel("Rank")
+ax1.legend()
+
+ax2.loglog(strength_sequence, "r-", marker=".", label="in+out")
+ax2.loglog(in_strength_sequence, "g-", marker=".", label="in")
+ax2.loglog(out_strength_sequence, "b-", marker=".", label="out")
+ax2.set_title("loglog")
+ax2.set_ylabel("Strength")
+ax2.set_xlabel("Rank")
+ax2.legend()
+plt.show()
+
+# 节点强度：平均、标准差、最小最大值、中位数
+print("\nIn Strength Descriptive Statistics:\n")
+print("Mean in strength: %.2f" % np.mean(in_strength_sequence))
+print("Std. Deviation: %.2f \n" % np.std(in_strength_sequence))
+print("Smallest in strength: %d" % np.amin(in_strength_sequence))
+print("Largest in strength: %d \n" % np.amax(in_strength_sequence))
+print("Median in strength: %.d\n\n" % np.median(in_strength_sequence))
+
+print("\nOut Strength Descriptive Statistics:\n")
+print("Mean out strength: %.2f" % np.mean(out_strength_sequence))
+print("Std. Deviation: %.2f\n" % np.std(out_strength_sequence))
+print("Smallest out strength: %d" % np.amin(out_strength_sequence))
+print("Largest out strength: %d\n" % np.amax(out_strength_sequence))
+print("Median out strength: %.d\n" % np.median(out_strength_sequence))
